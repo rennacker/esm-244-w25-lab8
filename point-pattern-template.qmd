@@ -17,6 +17,7 @@ execute:
   message: false
   warning: false
 ---
+
 Load packages
 
 ```{r setup}
@@ -29,7 +30,6 @@ library(tmap)
 ```
 
 ## Read in Data and Visualize
-
 
 ```{r}
 ### Read in the tree vole data
@@ -66,7 +66,6 @@ ggplot() +
   theme_void()
 ```
 
-
 ## Point Pattern Analysis
 
 Looking at the graph seems like there are distinct clusters of voles in Humboldt County, but there is a lot of noise so we may not be able to stay with staticstical certainity that the clusters our eyes pick out are not random.
@@ -94,18 +93,18 @@ plot(voles_full)
 Run to see vole "hotspots" by kernel density, then see what happens when you change sigma here!
 
 ```{r}
-voles_density <- density(voles_full, sigma = 5000) ### try different sigmas
+voles_density <- density(voles_full, sigma = 5000) ### sets variance of points
 
 plot(voles_density)
 ```
 
 Describe what the sigma parameter does.
 
+**Controls variance of the spatial grouping. Difference could be like individual vole holes or general area.**
 
 ## Nearest neighbor (G-function)
 
 In this week's lecture, we learned about distance methods to compare our point pattern to a scenario of complete spatial randomness. Here, we'll use both the G- and L-functions (L function is the K-function, standardized...interpretation is the same) to compare our observed point pattern to a simulated CSR scenario, to help us determine if it is *more clustered* or *more uniform* than CSR.
-
 
 ```{r}
 #| output: false
@@ -129,26 +128,45 @@ plot(gfunction_out)
 
 ```
 
-
-The observed line is much higher than the bounds of the theoritical line. We have sufficient evidence to conclude the voles are not randomly distributed.  
+The observed line is much higher than the bounds of the theoritical line. We have sufficient evidence to conclude the voles are not randomly distributed.
 
 While the base plot looks good. Let's make our own in ggplot to practice the our wrangling skills. What is the class of the `gfunction_out` object? What are the column names? What do you think the `obs`, `theo`, `lo`, and `hi` columns represent? How do we pivot the table to a useful dataframe to plot in ggplot?
 
+**Statistical tests prove nothing, they allow us to make our claim by adding evidence. **
 
 
+```{r}
+### Gather this to plot series in ggplot:
+gfunction_long <- gfunction_out %>% 
+  as.data.frame() %>% 
+  pivot_longer(cols = obs:hi, names_to = "model", values_to = "g_val")
+
+### Then make a graph in ggplot:
+ggplot(data = gfunction_long, aes(x = r, y = g_val, group = model)) +
+  geom_line(aes(color = model)) +
+  theme_minimal() +
+  labs(x = 'radius (m)', y = 'G(r)')
+
+```
 
 ### L-Function
- 
-How does the G-function differ from Ripley's K-function? 
- 
 
+How does the G-function differ from Ripley's K-function?
 
-With the same `envelope()` function from before, calculate the L-function. Because we're looking for the radius around points we have to change our `r` vector to match the entire size of the county ~80km. Also only use nsim=10 because it takes a long time to run.
+With the same `envelope()` function from before, calculate the L-function. Because we're looking for the radius around points we have to change our `r` vector to match the entire size of the county \~80km. Also only use nsim=10 because it takes a long time to run.
 
 Plot the L-function and interpret the results.
 
 
 
+```{r}
+r_vec <- seq(0, 80000, 5000)
+
+lfunction_out <- envelope(voles_full, fun = Lest, r = r_vec, nsim = 10)
+
+plot(lfunction_out)
 
 
+
+```
 

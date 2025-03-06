@@ -1,7 +1,18 @@
 ---
-title:
-author:
+title: EMS TIME SERIES Lab
+author: Travis Rennacker
 format: 
+  html: 
+    embed-resources: true
+    code-fold: true 
+    toc: true
+    number-sections: true
+    embed-resources: true
+theme: minimal
+execute:
+  echo: true
+  message: false
+  warning: false
 ---
 
 ```{r setup}
@@ -38,6 +49,8 @@ ggplot(data = toolik_df, aes(x = date, y = daily_air_temp)) +
 
 Notice that it doesn't work - because R doesn't understand the date is a *date* until we tell it.
 
+uh oh we need a tsibble ts-data frame
+
 ### Convert the data frame to a tsibble
 
 Let's go ahead and convert it to a tsibble using the `as_tsibble()` function. First, we'll need to convert the date to a `date` class, *then* convert to a tsibble. We could just keep it as a regular dataframe with a date column and do a lot with that, but the tsibble package gives lots of functionality around time series (thus the `ts` at the start).
@@ -45,7 +58,7 @@ Let's go ahead and convert it to a tsibble using the `as_tsibble()` function. Fi
 ```{r}
 toolik_ts <- toolik_df %>% 
   mutate(date = lubridate::mdy(date)) %>% 
-  as_tsibble(key = NULL, ### if we had multiple obs on same date from diff locations
+  as_tsibble(key = NULL, ### if we had multiple obs on same date from diff locations #key is county or whatever other grouping we need
              index = date) ### time index, here our column is `date`
 ```
 
@@ -67,6 +80,8 @@ We need to ask some big picture questions at this point, like:
 
 ## Use `filter_index()` to filter by date-times!
 
+Way more easyily to filter dates
+
 We can use `filter_index()` specifically to help us filter data by time spans. See `?filter_index()` for more information.
 
 >Formulas that specify start and end periods (inclusive), or strings.
@@ -79,30 +94,57 @@ We can use `filter_index()` specifically to help us filter data by time spans. S
 
 So for example "2010-12" ~ "2011-01" would filter from December 2010 through January 2011.
 
+```{r}
+toolik_ts |> filter_index("2010-12" ~ "2011-01-15") 
+  
+```
+
+
 Try to filter the Toolik tsibble from April 10, 2006 to May 15, 2006.
 
+```{r}
+toolik_ts |> filter_index("2006-04-10" ~ "2006-05-15") 
+```
+
+
 Filter another index from December 20, 2020 to the end of the dataset.
+
+```{r}
+toolik_ts |> filter_index("2020-12-20" ~ "2022-12-31") 
+
+#or solve this way
+
+toolik_ts |> filter_index("2020-12-20" ~ .) 
+```
+
 
 `filter_index()` also accepts multiple periods using commas to separate the intervals. Try to filter from December 2010 through January 2011, and from September 2, 2013 to October 31, 2014.
 
 Don't worry about saving the output to another object.
 
+```{r}
+toolik_ts |> filter_index("2010-12" ~ "2011-01", "2013-09" ~ "2014-10-31" ) 
+```
 
 
 ## Use `index_by()` to aggregate time series by increments
+
+**index by replaces groupby() with index_by()**
 
 `index_by()` replaces `group_by()` for time series data. After the data is indexed, we can still use summary, but now we're doing it across dates.
 
 
 ```{r}
 toolik_month <- toolik_ts |>  
-  index_by(yr_mo = ~yearmonth(.)) |> 
+  index_by(yr_mo = ~yearmonth(.)) |> #at what measure do we want to look at our dates? 
   summarize(monthly_mean_temp = mean(daily_air_temp, na.rm = TRUE)) |> 
   ungroup() ### just like after group_by()
 ```
 
 
 Now let's take a look:
+
+**the tilda tries to pass in inforamtion, not clear when you want to.. tricky. Pass info in... (faucet wrap just uses,)  DOT means everything in the data frame... 
 
 ```{r}
 #| fig-cap: "Source: Shaver, G. 2019. A multi-year DAILY weather file for the Toolik Field Station at Toolik Lake, AK starting 1988 to present. ver 4. Environmental Data Initiative."
